@@ -2,11 +2,18 @@ package com.example.exrxjava;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.widget.EditText;
+
+import com.example.exrxjava.databinding.ActivityMainBinding;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.annotations.NonNull;
@@ -17,6 +24,7 @@ import io.reactivex.rxjava3.core.Observer;
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 
 // Khái niệm về Thread
 // Main thread , UI thread là gì ?
@@ -47,20 +55,45 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 public class MainActivity extends AppCompatActivity {
 
     private Disposable disposable ;
+    private ActivityMainBinding activityMainBinding ;
+    @SuppressLint("CheckResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        activityMainBinding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(activityMainBinding.getRoot());
 
-        Observable<User> observable = getObservableUsers();
 
-        Observer<User> observer = getObserverUser();
-        observable.subscribeOn(Schedulers.io())
+        fromView(activityMainBinding.edtSearch)
+                .debounce(300, TimeUnit.MILLISECONDS)
+                .distinctUntilChanged()
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(observer);
+                .subscribe(
+                        data -> Log.d("beforeTextChanged", data)
+                );
+    }
 
+    private Observable<String> fromView(EditText editText) {
+        PublishSubject<String> publishSubject = PublishSubject.create();
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
+            }
 
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+               // Log.d("beforeTextChanged", String.valueOf(charSequence));
+                publishSubject.onNext(String.valueOf(charSequence));
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+        return publishSubject;
     }
 
     private Observer<User> getObserverUser(){
