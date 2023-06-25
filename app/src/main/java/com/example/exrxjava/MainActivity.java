@@ -1,7 +1,5 @@
 package com.example.exrxjava;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.text.Editable;
@@ -9,7 +7,10 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.exrxjava.databinding.ActivityMainBinding;
+import com.jakewharton.rxbinding4.view.RxView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,6 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.ObservableEmitter;
 import io.reactivex.rxjava3.core.ObservableOnSubscribe;
 import io.reactivex.rxjava3.core.Observer;
-import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
@@ -54,8 +54,9 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
 // disposable: Dùng để hủy sự kết nối của observer vs observable
 public class MainActivity extends AppCompatActivity {
 
-    private Disposable disposable ;
-    private ActivityMainBinding activityMainBinding ;
+    private Disposable disposable;
+    private ActivityMainBinding activityMainBinding;
+
     @SuppressLint("CheckResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +75,38 @@ public class MainActivity extends AppCompatActivity {
                 );
     }
 
+    private void throttleFirst() {
+        RxView.clicks(activityMainBinding.btnSearch)
+                .throttleFirst(4000, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        data -> Log.d("TAG", "Click " + System.currentTimeMillis()),
+                        error -> Log.d("TAG", "Error " + error.getMessage())
+                );
+    }
+
+    private void throttleLast() {
+
+        RxView.clicks(activityMainBinding.btnSearch)
+                .throttleLast(4000, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        data -> Log.d("TAG", "Click " + System.currentTimeMillis()),
+                        error -> Log.d("TAG", "Error " + error.getMessage())
+
+                );
+    }
+    private void throttleLatest(){
+        RxView.clicks(activityMainBinding.btnSearch)
+                .throttleLatest(4000, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        data -> Log.d("TAG", "Click " + System.currentTimeMillis()),
+                        error -> Log.d("TAG", "Error " + error.getMessage())
+
+                );
+    }
+
     private Observable<String> fromView(EditText editText) {
         PublishSubject<String> publishSubject = PublishSubject.create();
         editText.addTextChangedListener(new TextWatcher() {
@@ -84,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-               // Log.d("beforeTextChanged", String.valueOf(charSequence));
+                // Log.d("beforeTextChanged", String.valueOf(charSequence));
                 publishSubject.onNext(String.valueOf(charSequence));
             }
 
@@ -96,52 +129,53 @@ public class MainActivity extends AppCompatActivity {
         return publishSubject;
     }
 
-    private Observer<User> getObserverUser(){
+    private Observer<User> getObserverUser() {
         return new Observer<User>() {
             @Override
             public void onSubscribe(@NonNull Disposable d) {
                 disposable = d;
-                Log.e( "RXJAVA:", "onSubscrive" );
+                Log.e("RXJAVA:", "onSubscrive");
             }
 
             @Override
             public void onNext(@NonNull User user) {
-                Log.e( "RXJAVA:", user+" " );
+                Log.e("RXJAVA:", user + " ");
             }
 
             @Override
             public void onError(@NonNull Throwable e) {
-                Log.e( "RXJAVA:", e.getMessage()+" " );
+                Log.e("RXJAVA:", e.getMessage() + " ");
             }
 
             @Override
             public void onComplete() {
-                Log.e( "RXJAVA:", "onComplete" );
+                Log.e("RXJAVA:", "onComplete");
             }
         };
     }
+
     private Observable<User> getObservableUsers() {
-        List<User> getListUsers = getListUsers() ;
+        List<User> getListUsers = getListUsers();
 
         return Observable.create(new ObservableOnSubscribe<User>() {
             @Override
             public void subscribe(@NonNull ObservableEmitter<User> emitter) throws Throwable {
-                for (User user: getListUsers) {
+                for (User user : getListUsers) {
                     if (!emitter.isDisposed()) {
                         emitter.onNext(user);
                     }
                 }
-                if (!emitter.isDisposed()){
+                if (!emitter.isDisposed()) {
                     emitter.onComplete();
                 }
             }
         });
     }
 
-    private List<User> getListUsers(){
+    private List<User> getListUsers() {
         List<User> result = new ArrayList<>();
-        for(int i = 1; i <= 5 ; i++) {
-            result.add(new User(i, "Name "+ i));
+        for (int i = 1; i <= 5; i++) {
+            result.add(new User(i, "Name " + i));
         }
         return result;
     }
