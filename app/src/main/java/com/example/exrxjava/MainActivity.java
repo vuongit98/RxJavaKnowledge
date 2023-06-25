@@ -23,6 +23,7 @@ import io.reactivex.rxjava3.core.ObservableEmitter;
 import io.reactivex.rxjava3.core.ObservableOnSubscribe;
 import io.reactivex.rxjava3.core.Observer;
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 
@@ -57,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private Disposable disposable;
     private ActivityMainBinding activityMainBinding;
 
+
     @SuppressLint("CheckResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +75,107 @@ public class MainActivity extends AppCompatActivity {
                 .subscribe(
                         data -> Log.d("beforeTextChanged", data)
                 );
+
+        useZip();
+    }
+
+
+    private void useZip(){
+        Observable.zip(Observable.fromArray(getListUsers1()),
+                Observable.fromArray(getListProduct1()),
+                (dataUser , dataProduct)->{
+                    List<Object> objectList = new ArrayList<>();
+                    for (User user: dataUser
+                         ) {
+                        objectList.add(user);
+                    }
+                    for (Product product: dataProduct
+                         ) {
+                        objectList.add(product);
+                    }
+                    return objectList;
+                }
+        ).map(data -> {
+                    for (Object object : data
+                         ) {
+                        if (object instanceof User){
+                            ((User) object).setName(((User) object).getName()+" + 1");
+                        }
+                        else if (object instanceof Product){
+                            ((Product) object).setNameProduct(((Product) object).getNameProduct()+" + 2");
+
+                        }
+                    }
+                    return data;
+        })
+                .delay(4000, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new Observer<List<Object>>() {
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {
+                        disposable = d ;
+                    }
+
+                    @Override
+                    public void onNext(@NonNull List<Object> objects) {
+                        Log.d("TAG", objects+" ");
+                    }
+
+                    @Override
+                    public void onError(@NonNull Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
+
+    }
+
+    private void useFlagMap(){
+        Observable<List<User>> observable = Observable.fromArray(getListUsers1())
+                .flatMap(data ->
+                        {
+                            for (User user : data) {
+                                user.setName(" + A");
+                            }
+                            return Observable.just(data);
+                        }
+                )
+                .delay(1000, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread());
+
+
+        observable.subscribeWith(new Observer<List<User>>() {
+            @Override
+            public void onSubscribe(@NonNull Disposable d) {
+                disposable = d;
+                Log.d("TAG","onSubscribe");
+
+            }
+
+            @Override
+            public void onNext(@NonNull List<User> users) {
+                Log.d("TAG",users+" ");
+            }
+
+            @Override
+            public void onError(@NonNull Throwable e) {
+                Log.d("TAG",e.getMessage());
+
+            }
+
+            @Override
+            public void onComplete() {
+                Log.d("TAG","onComplete");
+
+            }
+        });
+
     }
 
     private void throttleFirst() {
@@ -96,7 +199,8 @@ public class MainActivity extends AppCompatActivity {
 
                 );
     }
-    private void throttleLatest(){
+
+    private void throttleLatest() {
         RxView.clicks(activityMainBinding.btnSearch)
                 .throttleLatest(4000, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
@@ -106,6 +210,27 @@ public class MainActivity extends AppCompatActivity {
 
                 );
     }
+
+    private List<User> getListUsers1() {
+        List<User> userList = new ArrayList<>();
+
+        for (int i = 1; i <= 5; i++) {
+            userList.add(new User(i, "User " + i));
+        }
+
+        return userList;
+    }
+
+
+    private List<Product> getListProduct1() {
+        List<Product> productList = new ArrayList<>();
+
+        for (int i = 1; i <= 5; i++) {
+            productList.add(new Product(i, "Product " + i));
+        }
+        return productList;
+    }
+
 
     private Observable<String> fromView(EditText editText) {
         PublishSubject<String> publishSubject = PublishSubject.create();
